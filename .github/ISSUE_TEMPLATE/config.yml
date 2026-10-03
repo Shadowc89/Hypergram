@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Join the Telegram channel
+    url: https://t.me/hypergram_news
+    about: Join the official channel and stay tuned for news, updates and announcements.
+  - name: Join the Telegram chat
+    url: https://t.me/hypergram_chat
+    about: Join the official chat and discuss with other users and developers.

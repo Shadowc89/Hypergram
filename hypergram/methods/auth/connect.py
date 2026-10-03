@@ -1,0 +1,66 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import hypergram
+
+
+class Connect:
+    async def connect(
+        self: hypergram.Client,
+    ) -> bool:
+        """
+        Connect the client to Telegram servers.
+
+        Returns:
+            ``bool``: On success, in case the passed-in session is authorized, True is returned. Otherwise, in case
+            the session needs to be authorized, False is returned.
+
+        Raises:
+            ConnectionError: In case you try to connect an already connected client.
+        """
+        if self.is_connected:
+            raise ConnectionError("Client is already connected")
+
+        await self.load_session()
+
+        server_address = await self.storage.server_address()
+
+        # `load_session` fills the address only for a fresh session; a stored one
+        #  missing it is corrupt, and `":" in None` would raise a bare `TypeError`.
+        if server_address is None:
+            raise ValueError("The session storage holds no server address")
+
+        self.session = await self.get_session(
+            server_address=server_address,
+            port=await self.storage.port(),
+            export_authorization=False,
+            temporary=True,
+        )
+        self.is_connected = True
+
+        is_ipv6_session: bool = ":" in server_address
+
+        if (self.ipv6 and not is_ipv6_session) or (not self.ipv6 and is_ipv6_session):
+            await self.set_dc(dc_id=await self.storage.dc_id())
+
+        return bool(await self.storage.user

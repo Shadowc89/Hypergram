@@ -1,0 +1,49 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+import hypergram
+from hypergram import raw, types
+
+from ..object import Object
+
+
+class ChatOwnerChanged(Object):
+    """Describes a service message about an ownership change in the chat.
+
+    Parameters:
+        new_owner (:obj:`~hypergram.types.User`):
+            The new owner of the chat.
+    """
+
+    def __init__(self, *, new_owner: types.User):
+        super().__init__()
+
+        self.new_owner = new_owner
+
+    @staticmethod
+    async def _parse(
+        client: hypergram.Client,
+        action: raw.types.MessageActionChangeCreator,
+        users: dict[int, types.User],
+    ) -> ChatOwnerChanged:
+        if isinstance(action, raw.types.MessageActionChangeCreator):
+            return ChatOwnerChanged(
+                new_owner=await types.User._parse(client, users.get(action.new_creator_id))
+            )

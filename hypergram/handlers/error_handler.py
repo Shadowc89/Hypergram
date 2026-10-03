@@ -1,0 +1,107 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
+
+from hypergram import raw
+
+from .handler import Handler
+
+if TYPE_CHECKING:
+    import hypergram
+    from hypergram.filters import Filter
+
+
+ErrorCallbackType = Callable[
+    [
+        "hypergram.Client",
+        Exception,
+        Handler[Any],
+        raw.base.Update,
+        dict[int, raw.base.User],
+        dict[int, raw.base.Chat],
+    ],
+    Any,
+]
+
+
+class ErrorHandler(Handler[ErrorCallbackType]):
+    """The Error handler class. Used to handle unexpected errors.
+
+    It is intended to be used with :meth:`~hypergram.Client.add_handler`.
+
+    For a more convenient way to register this handler, see the
+    :meth:`~hypergram.Client.on_error` decorator.
+
+    Parameters:
+        callback (``Callable``):
+            A function that will be called whenever an unexpected error is raised.
+            It takes *(client, exception, handler, update, users, chats)* as positional arguments
+            (look at the section below for a detailed description).
+
+        exceptions (``Exception`` | List of ``Exception``, *optional*):
+            An exception type or a sequence of exception types that this handler should handle.
+            If None, the handler will catch any exception that is a subclass of ``Exception``.
+
+        filters (:obj:`~hypergram.filters.Filter`, *optional*):
+            Pass one or more filters to allow only a subset of updates to be passed
+            in your callback function.
+
+    Other parameters passed to the callback:
+        client (:obj:`~hypergram.Client`):
+            The Client instance, useful when calling other API methods inside the error handler.
+
+        exception (``Exception``):
+            The Exception instance that was raised.
+
+        handler (:obj:`~hypergram.handlers.handler.Handler`):
+            The Handler instance from which the exception was raised.
+
+        update (:obj:`~hypergram.raw.base.Update`):
+            The received update, which can be one of the many single Updates listed in the
+            :obj:`~hypergram.raw.base.Update` base type.
+
+        users (``dict``):
+            Dictionary of all :obj:`~hypergram.raw.base.User` mentioned in the update.
+            You can access extra info about the user (such as *first_name*, *last_name*, etc...) by using
+            the IDs you find in the *update* argument (e.g.: *users[1768841572]*).
+
+        chats (``dict``):
+            Dictionary of all :obj:`~hypergram.raw.base.Chat` mentioned in the update.
+            You can access extra info about the chat (such as *title*, *participants_count*, etc...)
+            by using the IDs you find in the *update* argument (e.g.: *chats[1701277281]*).
+
+    """
+
+    def __init__(
+        self,
+        callback: ErrorCallbackType,
+        exceptions: Exception | Sequence[Exception] | None = None,
+        filters: Filter | None = None,
+    ) -> None:
+        super().__init__(callback, filters)
+
+        if exceptions is None:
+            self.exceptions = (Exception,)
+        elif isinstance(exceptions, Sequence):
+            self.exceptions = tuple(exceptions)
+        else:
+            self.exceptions = (exceptions,)

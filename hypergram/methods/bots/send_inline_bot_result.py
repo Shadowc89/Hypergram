@@ -1,0 +1,209 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+import hypergram
+from hypergram import enums, raw, types, utils
+
+if TYPE_CHECKING:
+    from datetime import datetime, timedelta
+
+log = logging.getLogger(__name__)
+
+
+class SendInlineBotResult:
+    async def send_inline_bot_result(
+        self: hypergram.Client,
+        chat_id: int | str,
+        query_id: int,
+        result_id: str,
+        disable_notification: bool | None = None,
+        message_thread_id: int | None = None,
+        direct_messages_topic_id: int | None = None,
+        reply_parameters: types.ReplyParameters | None = None,
+        paid_message_star_count: int | None = None,
+        schedule_date: datetime | timedelta | None = None,
+        reply_to_message_id: int | None = None,
+        reply_to_chat_id: int | str | None = None,
+        reply_to_story_id: int | None = None,
+        quote_text: str | None = None,
+        parse_mode: enums.ParseMode | None = None,
+        quote_entities: list[types.MessageEntity] | None = None,
+        quote_offset: int | None = None,
+    ) -> types.Message | None:
+        """Send an inline bot result.
+        Bot results can be retrieved using :meth:`~hypergram.Client.get_inline_bot_results`
+
+        .. include:: /_includes/usable-by/users.rst
+
+        Parameters:
+            chat_id (``int`` | ``str``):
+                Unique identifier (int) or username (str) of the target chat.
+                For your personal cloud (Saved Messages) you can simply use "me" or "self".
+                For a contact that exists in your Telegram address book you can use his phone number (str).
+
+            query_id (``int``):
+                Unique identifier for the answered query.
+
+            result_id (``str``):
+                Unique identifier for the result that was chosen.
+
+            disable_notification (``bool``, *optional*):
+                Sends the message silently.
+                Users will receive a notification with no sound.
+
+            message_thread_id (``int``, *optional*):
+                Unique identifier of a message thread to which the message belongs.
+                For forums only.
+
+            direct_messages_topic_id (``int``, *optional*):
+                Unique identifier of the topic in a channel direct messages chat administered by the current user.
+                For direct chats only.
+
+            reply_parameters (:obj:`~hypergram.types.ReplyParameters`, *optional*):
+                Describes reply parameters for the message that is being sent.
+
+            schedule_date (:py:obj:`~datetime.datetime` | :py:obj:`~datetime.timedelta`, *optional*):
+                Date when the message will be automatically sent.
+                A :py:obj:`~datetime.timedelta` is counted from now.
+
+            reply_to_message_id (``int``, *optional*):
+                If the message is a reply, ID of the original message.
+                This parameter is deprecated and should not be used.
+                Use `reply_parameters` instead.
+
+            reply_to_chat_id (``int`` | ``str``, *optional*):
+                Unique identifier (int) or username (str) of the chat holding the message that is replied to.
+                This parameter is deprecated and should not be used.
+                Use `reply_parameters` instead.
+
+            reply_to_story_id (``int``, *optional*):
+                If the message is a reply to a story, ID of the story.
+                This parameter is deprecated and should not be used.
+                Use `reply_parameters` instead.
+
+            quote_text (``str``, *optional*):
+                Text of the quoted part of the message that is replied to.
+                This parameter is deprecated and should not be used.
+                Use `reply_parameters` instead.
+
+            parse_mode (:obj:`~hypergram.enums.ParseMode`, *optional*):
+                Parse mode of the quoted part of the message that is replied to.
+                This parameter is deprecated and should not be used.
+                Use `reply_parameters` instead.
+
+            quote_entities (List of :obj:`~hypergram.types.MessageEntity`, *optional*):
+                List of special entities that appear in the quote, which can be specified instead of *parse_mode*.
+                This parameter is deprecated and should not be used.
+                Use `reply_parameters` instead.
+
+            quote_offset (``int``, *optional*):
+                Offset for quote in original message.
+                This parameter is deprecated and should not be used.
+                Use `reply_parameters` instead.
+
+            paid_message_star_count (``int``, *optional*):
+                The number of Telegram Stars the user agreed to pay to send the messages.
+
+        Returns:
+            :obj:`~hypergram.types.Message` | ``None``: On success, the sent message is returned, otherwise,
+            in case the server answered with no message, None is returned.
+
+        Example:
+            .. code-block:: python
+
+                await app.send_inline_bot_result(chat_id, query_id, result_id)
+        """
+        if any(
+            (
+                reply_to_message_id is not None,
+                reply_to_chat_id is not None,
+                reply_to_story_id is not None,
+                quote_text is not None,
+                parse_mode is not None,
+                quote_entities is not None,
+                quote_offset is not None,
+            )
+        ):
+            if reply_to_message_id is not None:
+                log.warning(
+                    "`reply_to_message_id` is deprecated and will be removed in future updates. Use `reply_parameters` instead."
+                )
+
+            if reply_to_chat_id is not None:
+                log.warning(
+                    "`reply_to_chat_id` is deprecated and will be removed in future updates. Use `reply_parameters` instead."
+                )
+
+            if reply_to_story_id is not None:
+                log.warning(
+                    "`reply_to_story_id` is deprecated and will be removed in future updates. Use `reply_parameters` instead."
+                )
+
+            if quote_text is not None:
+                log.warning(
+                    "`quote_text` is deprecated and will be removed in future updates. Use `reply_parameters` instead."
+                )
+
+            if parse_mode is not None:
+                log.warning(
+                    "`parse_mode` is deprecated and will be removed in future updates. Use `reply_parameters` instead."
+                )
+
+            if quote_entities is not None:
+                log.warning(
+                    "`quote_entities` is deprecated and will be removed in future updates. Use `reply_parameters` instead."
+                )
+
+            if quote_offset is not None:
+                log.warning(
+                    "`quote_offset` is deprecated and will be removed in future updates. Use `reply_parameters` instead."
+                )
+
+            reply_parameters = types.ReplyParameters(
+                message_id=reply_to_message_id,
+                chat_id=reply_to_chat_id,
+                story_id=reply_to_story_id,
+                quote=quote_text,
+                quote_parse_mode=parse_mode,
+                quote_entities=quote_entities,
+                quote_position=quote_offset,
+            )
+
+        r = await self.invoke(
+            raw.functions.messages.SendInlineBotResult(
+                peer=await self.resolve_peer(chat_id),
+                query_id=query_id,
+                id=result_id,
+                random_id=self.rnd_id(),
+                silent=disable_notification,
+                reply_to=await utils.get_reply_to(
+                    self, reply_parameters, message_thread_id, direct_messages_topic_id
+                ),
+                schedule_date=utils.datetime_to_timestamp(schedule_date),
+                allow_paid_stars=paid_message_star_count,
+            )
+        )
+
+        messages = await utils.parse_messages(client=self, messages=r)
+
+        return messages[0] if messages else None

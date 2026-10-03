@@ -1,0 +1,141 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+import logging
+
+import hypergram
+from hypergram import enums, raw, types, utils
+
+log = logging.getLogger(__name__)
+
+
+class EditInlineText:
+    async def edit_inline_text(
+        self: hypergram.Client,
+        inline_message_id: str,
+        text: str | None = None,
+        parse_mode: enums.ParseMode | None = None,
+        link_preview_options: types.LinkPreviewOptions | None = None,
+        entities: list[types.MessageEntity] | None = None,
+        rich_message: types.InputRichMessage | None = None,
+        reply_markup: types.keyborad | None = None,
+        disable_web_page_preview: bool | None = None,
+    ) -> bool:
+        """Edit the text of inline messages.
+
+        .. include:: /_includes/usable-by/bots.rst
+
+        Parameters:
+            inline_message_id (``str``):
+                Identifier of the inline message.
+
+            text (``str``, *optional*):
+                New text of the message.
+                Required if ``rich_message`` isn't specified.
+
+            parse_mode (:obj:`~hypergram.enums.ParseMode`, *optional*):
+                By default, texts are parsed using both Markdown and HTML styles.
+                You can combine both syntaxes together.
+
+            entities (List of :obj:`~hypergram.types.MessageEntity`, *optional*):
+                List of special entities that appear in message text, which can be specified instead of *parse_mode*.
+
+            link_preview_options (:obj:`~hypergram.types.LinkPreviewOptions`, *optional*):
+                Options used for link preview generation for the message.
+
+            rich_message (:obj:`~hypergram.types.InputRichMessage`, *optional*):
+                New rich content of the message.
+                Required if ``text`` isn't specified.
+
+            reply_markup (:obj:`~hypergram.types.keyborad`, *optional*):
+                An keyborad object.
+
+            disable_web_page_preview (``bool``, *optional*):
+                Disables link previews for links in this message.
+                This parameter is deprecated and should not be used.
+                Use `link_preview_options` instead.
+
+        Returns:
+            ``bool``: On success, True is returned.
+
+        Example:
+            .. code-block:: python
+
+                # Bots only
+
+                # Simple edit text
+                await app.edit_inline_text(inline_message_id, "new text")
+
+                # Edit rich text
+                await app.edit_inline_text(
+                    inline_message_id,
+                    rich_message=types.InputRichMessage(
+                        html="new <b>text</b>"
+                    )
+                )
+
+                # Take the same text message, remove the web page preview only
+                from hypergram import types
+
+                await app.edit_inline_text(
+                    inline_message_id,
+                    text=message.text,
+                    link_preview_options=types.LinkPreviewOptions(is_disabled=True)
+                )
+        """
+        link_preview_options = link_preview_options or self.link_preview_options
+
+        if disable_web_page_preview is not None:
+            log.warning(
+                "`disable_web_page_preview` is deprecated and will be removed in future updates. Use `link_preview_options` instead."
+            )
+            link_preview_options = types.LinkPreviewOptions(
+                is_disabled=disable_web_page_preview
+            )
+
+        unpacked = utils.unpack_inline_message_id(inline_message_id)
+        dc_id = unpacked.dc_id
+
+        session = await self.get_session(dc_id, is_media=True)
+
+        message = ""
+        _entities = None
+        input_rich_message = None
+
+        if text is not None:
+            message, _entities = (
+                await utils.parse_text_entities(self, text, parse_mode, entities)
+            ).values()
+        elif rich_message is not None:
+            input_rich_message = await rich_message.write(client=self)
+        else:
+            raise ValueError("Either text or rich_message must be specified")
+
+        return await session.invoke(
+            raw.functions.messages.EditInlineBotMessage(
+                id=unpacked,
+                no_webpage=getattr(link_preview_options, "is_disabled", None),
+                reply_markup=await reply_markup.write(self) if reply_markup else None,
+                message=message,
+                entities=_entities,
+                rich_message=input_rich_message,
+            ),
+            sleep_threshold=self.sleep_threshold,
+        )

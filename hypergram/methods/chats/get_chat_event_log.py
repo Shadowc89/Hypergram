@@ -1,0 +1,129 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+from typing import TYPE_CHECKING
+
+from collections.abc import AsyncGenerator
+
+import hypergram
+from hypergram import raw, types
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+
+class GetChatEventLog:
+    async def get_chat_event_log(
+        self: hypergram.Client,
+        chat_id: int | str,
+        query: str = "",
+        offset_id: int = 0,
+        limit: int = 0,
+        filters: types.ChatEventLogFilters | None = None,
+        user_ids: list[int | str] | None = None,
+    ) -> AsyncGenerator[types.ChatEvent, None]:
+        """Get the actions taken by chat members and administrators in the last 48h.
+
+        Only available for supergroups and channels. Requires administrator rights.
+        Results are returned in reverse chronological order (i.e., newest first).
+
+        .. include:: /_includes/usable-by/users.rst
+
+        Parameters:
+            chat_id (``int`` | ``str``):
+                Unique identifier (int) or username (str) of the target chat.
+
+            query (``str``, *optional*):
+                Search query to filter events based on text.
+                By default, an empty query is applied and all events will be returned.
+
+            offset_id (``int``, *optional*):
+                Offset event identifier from which to start returning results.
+                By default, no offset is applied and events will be returned starting from the latest.
+
+            limit (``int``, *optional*):
+                Maximum amount of events to be returned.
+                By default, all events will be returned.
+
+            filters (:obj:`~hypergram.types.ChatEventLogFilters`, *optional*):
+                The types of events to return.
+                By default, all types will be returned.
+
+            user_ids (List of ``int`` | ``str``, *optional*):
+                User identifiers (int) or usernames (str) by which to filter events.
+                By default, events relating to all users will be returned.
+
+        Yields:
+            :obj:`~hypergram.types.ChatEvent` objects.
+
+        Example:
+            .. code-block:: python
+
+                # Get all events
+                async for event in app.get_chat_event_log(chat_id):
+                    print(event)
+
+                # Return only member join and leave events
+                async for event in app.get_chat_event_log(
+                    chat_id,
+                    filters=types.ChatEventLogFilters(
+                        member_joins=True,
+                        member_leaves=True
+                    )
+                ):
+                    print(event)
+        """
+        current = 0
+        total = abs(limit) or (1 << 31)
+        limit = min(100, total)
+
+        while True:
+            r: raw.base.channels.AdminLogResults = await self.invoke(
+                raw.functions.channels.GetAdminLog(
+                    channel=await self.resolve_peer(chat_id),
+                    q=query,
+                    min_id=0,
+                    max_id=offset_id,
+                    limit=limit,
+                    events_filter=filters.write() if filters else None,
+                    admins=(
+                        [await self.resolve_peer(i) for i in user_ids]
+                        if user_ids is not None
+                        else user_ids
+                    ),
+                )
+            )
+
+            if not r.events:
+                return
+
+            last = r.events[-1]
+            offset_id = last.id
+
+            users = {i.id: i for i in r.users}
+            chats = {i.id: i for i in r.chats}
+
+            for event in r.events:
+                yield await types.ChatEvent._parse(self, event, users, chats)
+
+                current += 1
+
+                if current >= total:
+                    return

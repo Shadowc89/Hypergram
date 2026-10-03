@@ -1,0 +1,92 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+from typing import TYPE_CHECKING
+
+import hypergram
+from hypergram import raw, types, utils
+
+if TYPE_CHECKING:
+    from datetime import datetime, timedelta
+
+
+class RestrictChatMember:
+    async def restrict_chat_member(
+        self: hypergram.Client,
+        chat_id: int | str,
+        user_id: int | str,
+        permissions: types.ChatPermissions,
+        until_date: datetime | timedelta | None = None,
+    ) -> types.Chat:
+        """Restrict a user in a supergroup.
+
+        You must be an administrator in the supergroup for this to work and must have the appropriate admin rights.
+        Pass True for all permissions to lift restrictions from a user.
+
+        .. include:: /_includes/usable-by/users-bots.rst
+
+        Parameters:
+            chat_id (``int`` | ``str``):
+                Unique identifier (int) or username (str) of the target chat.
+
+            user_id (``int`` | ``str``):
+                Unique identifier (int) or username (str) of the target user.
+                For a contact that exists in your Telegram address book you can use his phone number (str).
+
+            permissions (:obj:`~hypergram.types.ChatPermissions`):
+                New user permissions.
+
+            until_date (:py:obj:`~datetime.datetime` | :py:obj:`~datetime.timedelta`, *optional*):
+                Date when the user will be unbanned.
+                If user is banned for more than 366 days or less than 30 seconds from the current time they are
+                considered to be banned forever. Defaults to epoch (ban forever).
+                A :py:obj:`~datetime.timedelta` is counted from now.
+
+        Returns:
+            :obj:`~hypergram.types.Chat`: On success, a chat object is returned.
+
+        Example:
+            .. code-block:: python
+
+                from datetime import timedelta
+                from hypergram.types import ChatPermissions
+
+                # Completely restrict chat member (mute) forever
+                await app.restrict_chat_member(chat_id, user_id, ChatPermissions())
+
+                # Chat member muted for 24h
+                await app.restrict_chat_member(chat_id, user_id, ChatPermissions(),
+                    until_date=timedelta(days=1))
+
+                # Chat member can only send text messages
+                await app.restrict_chat_member(chat_id, user_id,
+                    ChatPermissions(can_send_messages=True))
+        """
+        until_date = until_date or utils.zero_datetime()
+
+        r = await self.invoke(
+            raw.functions.channels.EditBanned(
+                channel=await self.resolve_peer(chat_id),
+                participant=await self.resolve_peer(user_id),
+                banned_rights=permissions.write(until_date),
+            )
+        )
+
+        return utils.require_parsed(await types.Chat._parse_chat(self, r.chats[0]))

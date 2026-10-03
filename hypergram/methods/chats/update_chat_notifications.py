@@ -1,0 +1,103 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+from typing import TYPE_CHECKING
+
+import hypergram
+from hypergram import raw, utils
+
+if TYPE_CHECKING:
+    from datetime import datetime, timedelta
+
+
+class UpdateChatNotifications:
+    async def update_chat_notifications(
+        self: hypergram.Client,
+        chat_id: int | str,
+        mute: bool | None = None,
+        mute_until: datetime | timedelta | None = None,
+        stories_muted: bool | None = None,
+        stories_hide_sender: bool | None = None,
+        show_previews: bool | None = None,
+    ) -> bool:
+        """Update the notification settings for the selected chat
+
+        .. include:: /_includes/usable-by/users.rst
+
+        Parameters:
+            chat_id (``int`` | ``str``):
+                Unique identifier (int) or username (str) of the target chat.
+
+            mute (``bool``, *optional*):
+                Pass True if you want to mute chat.
+
+            mute_until (:py:obj:`~datetime.datetime` | :py:obj:`~datetime.timedelta`, *optional*):
+                Date until which the chat stays muted.
+                Defaults to forever when mute is True, and to the epoch (not muted) otherwise.
+                A :py:obj:`~datetime.timedelta` is counted from now.
+
+            stories_muted (``bool``, *optional*):
+                Pass True to stop being notified about new stories posted by this chat.
+                Independent of mute, which covers messages only.
+
+            stories_hide_sender (``bool``, *optional*):
+                Pass True to hide the poster's name in story notifications from this chat.
+
+            show_previews (``bool``, *optional*):
+                If the text of the message shall be displayed in notification.
+
+        Returns:
+            ``bool``: True on success, False otherwise.
+
+        Example:
+            .. code-block:: python
+
+                from datetime import timedelta
+
+                # Mute a chat permanently
+                await app.update_chat_notifications(chat_id, mute=True)
+
+                # Mute a chat for 10 minutes
+                await app.update_chat_notifications(
+                    chat_id,
+                    mute=True,
+                    mute_until=timedelta(minutes=10)
+                )
+
+                # Unmute a chat
+                await app.update_chat_notifications(chat_id, mute=False)
+        """
+        if not mute_until:
+            mute_until = utils.max_datetime() if mute else utils.zero_datetime()
+
+        r = await self.invoke(
+            raw.functions.account.UpdateNotifySettings(
+                peer=raw.types.InputNotifyPeer(peer=await self.resolve_peer(chat_id)),
+                settings=raw.types.InputPeerNotifySettings(
+                    show_previews=show_previews,
+                    silent=mute,
+                    mute_until=utils.datetime_to_timestamp(mute_until),
+                    stories_muted=stories_muted,
+                    stories_hide_sender=stories_hide_sender,
+                ),
+            )
+        )
+
+        return r

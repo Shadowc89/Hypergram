@@ -1,0 +1,49 @@
+#  hypergram - Telegram MTProto API Client Library for Python
+#  Copyright (C) 2017-present Dan <https://github.com/delivrance>
+#
+#  This file is part of hypergram.
+#
+#  hypergram is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  hypergram is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with hypergram.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import annotations as _annotations
+
+import hypergram
+from hypergram import raw, types, utils
+
+
+class ProcessGiftPurchaseOffer:
+    async def process_gift_purchase_offer(
+        self: hypergram.Client, message_id: int, accept: bool
+    ) -> types.Message | None:
+        """Handles a pending gift purchase offer.
+
+        .. include:: /_includes/usable-by/users.rst
+
+        Parameters:
+            message_id (``int``):
+                Identifier of the message with the gift purchase offer.
+
+            accept (``bool``):
+                Pass True to accept the request.
+                Pass False to reject it.
+
+        Returns:
+            :obj:`~hypergram.types.Message` | ``None``: On success, the sent message is returned, otherwise, in case the
+            server answered with no message, None is returned.
+        """
+        r = await self.invoke(
+            raw.functions.payments.ResolveStarGiftOffer(offer_msg_id=message_id, decline=not accept)
+        )
+
+        return next(iter(await utils.parse_messages(client=self, messages=r)), None)
